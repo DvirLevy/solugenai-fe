@@ -30,9 +30,9 @@ Every color, radius, shadow, and control size is a CSS variable defined once in 
 
 `src/` is organized by architectural role, not by feature:
 
-- `components/ui/` — shadcn/ui primitives (Button, Input, Label, Card, Checkbox, Alert), customized to the token set above.
-- `components/auth/` / `components/common/` — composed, reusable pieces (e.g. `AuthCard`, `FormField`, `PasswordField`, `LoadingButton`). Pages assemble these; they must not duplicate markup/styling across Login/Register.
-- `layouts/` — page shells (e.g. `AuthLayout`).
+- `components/ui/` — shadcn/ui primitives (Button, Input, Label, Card, Checkbox, Alert), hand-written (not pulled via the shadcn CLI) to match `components.json`'s aliases and the token set above. `Button` carries two extra variants beyond shadcn defaults: `brand` (the gradient CTA) and `dark` (the navbar "Log out" button).
+- `components/auth/` / `components/common/` — composed, reusable pieces built on `components/ui/`. Current inventory: `Logo`, `GradientBorder` (the 3px teal→mint frame — inner radius is `calc(var(--radius-shell) - 3px)` via inline style so it nests without corner gaps), `AuthCard` (`GradientBorder` + padding, used by every auth screen), `PageHeader`, `FormField` and `PasswordField` (forwardRef wrappers around `Input` that own the label/error/helper-text/aria wiring — pass RHF's `{...register(name)}` straight through), `LoadingButton` (disables + spinner when `isLoading`), `FormError` (renders `null` when there's no message), `AppNavbar` + `UserBadge` (dashboard header; `getInitials()` in `lib/utils.ts` derives avatar initials and returns `''` gracefully for a missing/single-word name). Pages assemble these; they must not duplicate markup/styling across Login/Register.
+- `layouts/` — page shells (`AuthLayout`: centered column, `max-w-card`, mobile-first padding).
 - `pages/` — route-level screens. **Pages compose only** — no `fetch`/`fetch`-adjacent calls or business logic here.
 - `services/` — plain API functions (e.g. `auth.service.ts`: `login`, `register`, `logout`, `getCurrentUser`). Zero React/TanStack imports — pure `fetch` wrappers.
 - `queries/` — TanStack Query hooks (e.g. `auth.queries.ts`: `useCurrentUser`, `useLogin`, `useRegister`, `useLogout`) that call into `services/`. This is the only place server state is allowed to live — no mirroring auth/user state into `useState`, Context, or another store.
