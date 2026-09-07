@@ -21,7 +21,7 @@ export function Logo({ className, align = 'center' }: LogoProps) {
 
       <span className="text-foreground text-xl font-extrabold tracking-tight">
         Solu
-        <span className="from-brand-from to-brand-to bg-gradient-to-r bg-clip-text text-transparent">
+        <span className="from-brand-from to-brand-to bg-linear-to-r bg-clip-text text-transparent">
           Gen
         </span>
         AI
