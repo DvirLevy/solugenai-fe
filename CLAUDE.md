@@ -14,13 +14,18 @@ npm run test:watch      # vitest (watch mode)
 npm run test:coverage   # vitest run --coverage
 npx vitest run tests/path/to/file.test.tsx   # single test file
 npx vitest run -t "test name substring"      # single test by name
+
+# Docker — see README.md "Running the frontend" for all execution modes
+docker build -t solugen-frontend --build-arg VITE_API_URL=<backend-url> .
+docker run -p 8080:4173 solugen-frontend
+docker compose up --build   # frontend-only compose file; VITE_API_URL as an env var, not baked into the shell
 ```
 
 There is no `tailwind.config.js` — Tailwind v4 is configured CSS-first via `@theme` in `src/styles/theme.css`, loaded through `@tailwindcss/vite`.
 
 ## Architecture
 
-This is the **frontend-only** repo for a full-stack authentication system (React + Vite + TypeScript + Tailwind + shadcn/ui + TanStack Query + React Hook Form + Zod). The backend and database live in a **separate repository** — do not add backend/db code, a root-level `docker-compose.yml` covering more than the frontend service, or assume a monorepo layout above this directory.
+This is the **frontend-only** repo for a full-stack authentication system (React + Vite + TypeScript + Tailwind + shadcn/ui + TanStack Query + React Hook Form + Zod). The backend and database live in a **separate repository** — do not add backend/db code, a root-level `docker-compose.yml` covering more than the frontend service, or assume a monorepo layout above this directory. `README.md` is the canonical reference for architecture, the design system, all execution modes, and the assumed API contract — this file is the condensed version for a coding agent working in the code day-to-day.
 
 ### Design tokens are the only source of visual truth
 
@@ -39,7 +44,6 @@ Every color, radius, shadow, and control size is a CSS variable defined once in 
 - `schemas/` — Zod schemas + inferred types, shared by `pages/` (via `react-hook-form` + `@hookform/resolvers/zod`) and reused by `services/` request typing where relevant.
 - `types/` — TypeScript contracts (`User`, `*Request`, `*Response`, `ApiError`).
 - `routes/` — React Router setup (`AppRoutes.tsx`), including route guards (`ProtectedRoute`, `GuestRoute`).
-- `hooks/` — non-query React hooks.
 - `lib/` — cross-cutting utilities (`cn()` in `utils.ts`; the API client fetch wrapper belongs here).
 
 ### Auth model (drives API-layer and query-hook design)
@@ -86,3 +90,9 @@ All tests live under `tests/`, mirroring `src/`'s structure (`tests/components/`
 - `tests/utils.tsx` exports `renderWithProviders`, which wraps a component in a fresh `QueryClient` (retries off) and `MemoryRouter`. Use it instead of RTL's bare `render` for anything touching routing or TanStack Query.
 - `tests/mocks/{server,handlers}.ts` hold the MSW setup. `handlers.ts` defines the default "happy path + signed out" behavior for all four `/auth/*` endpoints (`GET /auth/me` defaults to `401`) and exports `mockUser`; a test needing a different response (error, authenticated `/me`, etc.) overrides it locally with `server.use(...)` rather than editing the shared defaults. MSW `onUnhandledRequest` is set to `"error"`, so every network call a test triggers needs a matching handler.
 - The Vitest `test.env` block in `vite.config.ts` supplies `VITE_API_URL` for the test environment — do not add a `.env.test` or any other env file for this; env files are not to be added to this repo without explicit sign-off.
+
+**Visual/manual QA gotcha:** `Input` and `Button` carry `transition-colors` (150ms). A screenshot or `getComputedStyle` read taken immediately after a synthetic focus/hover event (e.g. via Playwright) can catch the interpolated mid-transition color and look wrong (a teal focus ring briefly reads as near-black). Wait for the transition to finish (~200ms) before asserting on or screenshotting a color-dependent state change.
+
+## Docker
+
+`Dockerfile` is a **single stage**, deliberately not nginx-based: `node:22-alpine` runs `npm ci && npm run build` (with `VITE_API_URL` as a build ARG, since Vite inlines it) and the container's `CMD` is `npm run preview -- --host 0.0.0.0 --port 4173` — Vite's own preview server, which already handles the SPA fallback (a direct link or refresh on `/dashboard` resolves correctly) without adding a second web server to the stack. `docker-compose.yml` here defines only the `frontend` service (published port maps to container port `4173`) — no `db`/`backend`, since those live in the separate backend repo.

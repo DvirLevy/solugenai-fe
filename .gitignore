@@ -13,12 +13,9 @@ dist-ssr
 *.local
 coverage
 
-# Env — real values stay local, only the example is committed
-.env
 .env.*
-!.env.example
 
-# Editor directories and files
+
 .vscode/*
 !.vscode/extensions.json
 .idea
