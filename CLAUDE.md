@@ -44,14 +44,32 @@ Every color, radius, shadow, and control size is a CSS variable defined once in 
 
 ### Auth model (drives API-layer and query-hook design)
 
-The backend issues a **JWT inside an HttpOnly cookie**. This repo must never attempt to read, store, or inspect that token — no `localStorage`/`sessionStorage`/React-state token handling. Every request to the backend must be made with `credentials: "include"`. Authentication state is derived purely by calling `GET /api/auth/me` through TanStack Query (`queryKey: ["auth", "currentUser"]`); a `401` from that endpoint is a normal "unauthenticated" result, not an error to throw/log. Login/register/logout mutations invalidate or set that query key rather than tracking auth in any parallel state.
+The backend issues a **JWT inside an HttpOnly cookie**. This repo must never attempt to read, store, or inspect that token — no `localStorage`/`sessionStorage`/React-state token handling. Every request to the backend must be made with `credentials: "include"` (`lib/api-client.ts` does this unconditionally — never call `fetch` directly elsewhere). Authentication state is derived purely by calling `GET /api/auth/me` through TanStack Query.
 
 `VITE_API_URL` is the backend base URL and is **inlined at build time** by Vite — when containerizing, it must be passed as a Docker build arg, not a runtime env var.
+
+#### API contract (`services/auth.service.ts`)
+
+| Endpoint | Request body | Success |
+|---|---|---|
+| `POST /auth/register` | `RegisterRequest` (`fullName`, `email`, `password`) | `201` → `User` |
+| `POST /auth/login` | `LoginRequest` (`email`, `password`, `rememberMe`) | `200` → `User`, sets the HttpOnly cookie |
+| `POST /auth/logout` | — | `204` |
+| `GET /auth/me` | — | `200` → `User`, or `401` when unauthenticated |
+
+Error bodies are `ApiErrorBody` (`{ message, errors? }`, in `types/auth.ts`). `lib/api-client.ts` normalizes every failure — HTTP error status, unparsable body, or a thrown `fetch` (network down) — into a single `ApiError` class (`status`, user-safe `message`, optional `fieldErrors`). Rules baked into that normalization: a `>=500` status always becomes a generic "something went wrong" message (the real backend message is never shown to the user); a network failure gets `status: 0`; anything else keeps the backend's `message`/`errors` as-is. **Add new endpoints through this same `apiClient.get`/`apiClient.post` path** rather than calling `fetch` directly, so this normalization isn't bypassed.
+
+#### Query-key and invalidation convention (`queries/auth.queries.ts`)
+
+- `authKeys.currentUser` (`["auth", "currentUser"]`) is the single source of truth for "who is logged in." `useCurrentUser()` catches a `401` `ApiError` specifically and resolves to `null` — it never lets that 401 surface as `isError`. Any other status still throws.
+- `useLogin` calls `queryClient.invalidateQueries({ queryKey: authKeys.currentUser })` on success rather than writing the response into the cache directly. **This only refetches if something has an active `useCurrentUser()` observer mounted** (e.g. `GuestRoute`/`ProtectedRoute` in `routes/`, added in Task 4) — that's intentional and mirrors how `GuestRoute` will reactively redirect once the query resolves, but it means a login mutation used somewhere with no `useCurrentUser()` mounted anywhere in the tree won't visibly update the cache until something observes it.
+- `useLogout` calls `queryClient.setQueryData(authKeys.currentUser, null)` directly (no round trip) since the outcome is already certain.
+- `useRegister` intentionally does **not** touch the `currentUser` cache — whether registration also authenticates the user is a backend decision this repo can't assume, so the calling page must check `useCurrentUser` (or its own response) to decide where to send the user next.
 
 ### Testing conventions
 
 All tests live under `tests/`, mirroring `src/`'s structure (`tests/components/`, `tests/schemas/`, `tests/queries/`, `tests/pages/`, etc.) — **never co-locate a test next to the source file it covers.** This is enforced by `vitest.config`'s `test.include: ["tests/**/*.test.{ts,tsx}"]`.
 
 - `tests/utils.tsx` exports `renderWithProviders`, which wraps a component in a fresh `QueryClient` (retries off) and `MemoryRouter`. Use it instead of RTL's bare `render` for anything touching routing or TanStack Query.
-- `tests/mocks/{server,handlers}.ts` hold the MSW setup; add new endpoint handlers there rather than mocking `fetch` per-test. MSW `onUnhandledRequest` is set to `"error"`, so every network call a test triggers needs a matching handler.
+- `tests/mocks/{server,handlers}.ts` hold the MSW setup. `handlers.ts` defines the default "happy path + signed out" behavior for all four `/auth/*` endpoints (`GET /auth/me` defaults to `401`) and exports `mockUser`; a test needing a different response (error, authenticated `/me`, etc.) overrides it locally with `server.use(...)` rather than editing the shared defaults. MSW `onUnhandledRequest` is set to `"error"`, so every network call a test triggers needs a matching handler.
 - The Vitest `test.env` block in `vite.config.ts` supplies `VITE_API_URL` for the test environment — do not add a `.env.test` or any other env file for this; env files are not to be added to this repo without explicit sign-off.
