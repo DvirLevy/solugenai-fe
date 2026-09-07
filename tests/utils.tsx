@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 export function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
+      queries: { retry: false, staleTime: 0 },
       mutations: { retry: false },
     },
   })
