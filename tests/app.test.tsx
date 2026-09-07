@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import App from '@/App'
-import { renderWithProviders, screen } from './utils'
+import { renderWithProviders, screen, waitFor } from './utils'
 
 describe('app shell', () => {
-  it('mounts through the shared providers', () => {
-    renderWithProviders(<App />)
+  it('mounts through the shared providers and routes an unauthenticated visitor to Login', async () => {
+    renderWithProviders(<App />, { route: '/' })
 
-    expect(
-      screen.getAllByRole('heading', { name: /welcome back/i, level: 1 }),
-    ).not.toHaveLength(0)
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { name: /welcome back/i, level: 1 }),
+      ).toBeInTheDocument(),
+    )
   })
 })
