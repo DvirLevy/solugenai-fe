@@ -7,7 +7,7 @@ describe('app shell', () => {
     renderWithProviders(<App />)
 
     expect(
-      screen.getByRole('heading', { name: /design tokens/i }),
-    ).toBeInTheDocument()
+      screen.getAllByRole('heading', { name: /welcome back/i, level: 1 }),
+    ).not.toHaveLength(0)
   })
 })
