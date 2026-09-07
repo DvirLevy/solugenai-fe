@@ -38,7 +38,7 @@ Every color, radius, shadow, and control size is a CSS variable defined once in 
 - `queries/` — TanStack Query hooks (e.g. `auth.queries.ts`: `useCurrentUser`, `useLogin`, `useRegister`, `useLogout`) that call into `services/`. This is the only place server state is allowed to live — no mirroring auth/user state into `useState`, Context, or another store.
 - `schemas/` — Zod schemas + inferred types, shared by `pages/` (via `react-hook-form` + `@hookform/resolvers/zod`) and reused by `services/` request typing where relevant.
 - `types/` — TypeScript contracts (`User`, `*Request`, `*Response`, `ApiError`).
-- `routes/` — React Router setup, including route guards (`ProtectedRoute`, `GuestRoute`).
+- `routes/` — React Router setup (`AppRoutes.tsx`), including route guards (`ProtectedRoute`, `GuestRoute`).
 - `hooks/` — non-query React hooks.
 - `lib/` — cross-cutting utilities (`cn()` in `utils.ts`; the API client fetch wrapper belongs here).
 
@@ -65,6 +65,19 @@ Error bodies are `ApiErrorBody` (`{ message, errors? }`, in `types/auth.ts`). `l
 - `useLogin` calls `queryClient.invalidateQueries({ queryKey: authKeys.currentUser })` on success rather than writing the response into the cache directly. **This only refetches if something has an active `useCurrentUser()` observer mounted** (e.g. `GuestRoute`/`ProtectedRoute` in `routes/`, added in Task 4) — that's intentional and mirrors how `GuestRoute` will reactively redirect once the query resolves, but it means a login mutation used somewhere with no `useCurrentUser()` mounted anywhere in the tree won't visibly update the cache until something observes it.
 - `useLogout` calls `queryClient.setQueryData(authKeys.currentUser, null)` directly (no round trip) since the outcome is already certain.
 - `useRegister` intentionally does **not** touch the `currentUser` cache — whether registration also authenticates the user is a backend decision this repo can't assume, so the calling page must check `useCurrentUser` (or its own response) to decide where to send the user next.
+
+### Routes and guard behavior (`routes/AppRoutes.tsx`)
+
+| Path | Guard | Page |
+|---|---|---|
+| `/login` | `GuestRoute` | `LoginPage` |
+| `/register` | `GuestRoute` | `RegisterPage` |
+| `/dashboard` | `ProtectedRoute` | `DashboardPage` |
+| `*` (anything else) | — | `<Navigate to="/dashboard" replace />` (which itself resolves via `ProtectedRoute`) |
+
+Both guards call `useCurrentUser()` and, while `isPending`, render `PageLoader` — the guarded page is **never** rendered before the auth check resolves, so protected content can't flash and an already-authenticated visitor never sees the login/register form. `ProtectedRoute` sends a signed-out visitor to `/login`; `GuestRoute` sends a signed-in visitor to `/dashboard`.
+
+**Known gotcha (caused a real infinite-request bug during development):** don't call `useCurrentUser()` a second time inside a page that already sits behind `GuestRoute`/`ProtectedRoute`. Two simultaneously-mounted observers of the same errored (non-401, `retry: false`) query — which happens whenever a guard doesn't navigate away (e.g. `GuestRoute` staying on `/register` for a genuinely signed-out visitor) — went into a tight refetch loop against a real unreachable backend, thousands of requests per second. It did **not** reproduce with MSW in tests (resolves too fast to hit the same interleaving) or on `/dashboard` (`ProtectedRoute` navigates away immediately, tearing down one observer before it can loop). `RegisterPage` needed the current user post-submit and no longer calls the hook itself for that — it reads the ancestor `GuestRoute`'s already-mounted query via `queryClient.refetchQueries({ queryKey: authKeys.currentUser })` + `queryClient.getQueryData(...)` instead. Reach for that pattern (or lift the guard's result via context) rather than a second `useCurrentUser()` call.
 
 ### Testing conventions
 
