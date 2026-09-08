@@ -53,31 +53,35 @@ No other environment-specific values are hardcoded anywhere in the application c
 
 ## Running the frontend
 
-### 1. Locally, without Docker
+In every mode below, `VITE_API_URL` must point at a backend that's already running (a separate repo — this one doesn't start or orchestrate it). If nothing's listening there yet, the app still loads and the UI itself (routing, validation, guard redirects) works; only the actual login/register/dashboard requests will fail.
+
+### Without Docker
 
 ```bash
 npm install
 npm run dev
 ```
 
-Requires a backend reachable at `VITE_API_URL` for the auth flows to actually work; the UI itself (routing, validation, guard redirects) functions without one.
+Runs the Vite dev server at `http://localhost:5173`, reading `VITE_API_URL` from `.env`.
 
-### 2. Standalone, with Docker
+### With Docker
+
+Two ways to build and run the image — pick one:
+
+**`docker build` / `docker run`**
 
 ```bash
 docker build -t solugen-frontend --build-arg VITE_API_URL=http://localhost:4000/api .
 docker run -p 8080:4173 solugen-frontend
 ```
 
-Serves the production build via Vite's own preview server at `http://localhost:8080`, with an SPA fallback so a direct link or refresh on `/dashboard` still resolves.
-
-### 3. With Docker Compose (frontend-only)
+**`docker compose`** (this repo's `docker-compose.yml` defines only the `frontend` service — no `db`/`backend`, since those live in the separate backend repo)
 
 ```bash
 VITE_API_URL=http://localhost:4000/api docker compose up --build
 ```
 
-`docker-compose.yml` here defines a single `frontend` service — there is no `db` or `backend` service in this repo. Point `VITE_API_URL` at wherever your backend is actually running (another `docker compose` project, a local process, etc.) before building.
+Both serve the production build via Vite's own preview server at `http://localhost:8080`, with an SPA fallback so a direct link or refresh on `/dashboard` still resolves. `VITE_API_URL` is a **build arg** either way (Vite inlines it at build time), not a runtime variable — pass it to whichever command does the building.
 
 ## Auth flow
 
