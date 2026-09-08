@@ -1,9 +1,5 @@
 import { cn } from '@/lib/utils'
 
-/**
- * Recreated typographic wordmark — no logo asset was supplied with the
- * mockups. Swap for a real SVG if one becomes available.
- */
 type LogoProps = {
   className?: string
   align?: 'center' | 'start'

@@ -13,7 +13,6 @@ export const authKeys = {
   currentUser: ['auth', 'currentUser'] as const,
 }
 
-/** A 401 here means "not signed in" — resolves to `null`, never throws. */
 export function useCurrentUser() {
   return useQuery({
     queryKey: authKeys.currentUser,
@@ -48,12 +47,6 @@ export function useRegister() {
   })
 }
 
-/**
- * Intentionally does not touch the `currentUser` cache — this action is only
- * ever reached signed-out (via the emailed reset link), and the backend does
- * not authenticate the user as a result of it. The calling page sends the
- * user to /login to sign in with their new password.
- */
 export function useResetPassword() {
   return useMutation({
     mutationFn: (payload: ResetPasswordRequest) => authService.resetPassword(payload),

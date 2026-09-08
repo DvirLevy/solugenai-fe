@@ -40,11 +40,6 @@ export function RegisterPage() {
       { fullName: values.fullName, email: values.email, password: values.password },
       {
         onSuccess: async () => {
-          // Whether registration also authenticates is a backend decision —
-          // re-check /auth/me rather than assuming either way. Refetches
-          // through the queryClient instead of mounting our own
-          // useCurrentUser() observer, since GuestRoute already keeps one
-          // mounted for this page (its queryFn is reused for the refetch).
           await queryClient.refetchQueries({ queryKey: authKeys.currentUser })
           const user = queryClient.getQueryData<User | null>(authKeys.currentUser)
           if (user) {

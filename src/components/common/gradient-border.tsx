@@ -1,11 +1,6 @@
 import { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-/**
- * The signature 3px teal→mint gradient frame from the mockups, wrapping a
- * white inner surface. The inner radius is shaved by the border thickness so
- * the frame nests cleanly instead of leaving visible corner gaps.
- */
 export function GradientBorder({
   children,
   className,

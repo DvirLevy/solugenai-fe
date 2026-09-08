@@ -29,9 +29,6 @@ export function ForgotPasswordPage() {
   const onSubmit = handleSubmit((values) => {
     setFormError(null)
     forgotPasswordMutation.mutate(values, {
-      // Show the same confirmation whether or not the email is registered —
-      // the backend is expected to respond identically either way so this
-      // page can't be used to enumerate accounts.
       onSuccess: () => setSubmittedEmail(values.email),
       onError: (error) => setFormError(getErrorMessage(error)),
     })

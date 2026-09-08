@@ -5,9 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * "Jane Doe" -> "JD", "Cher" -> "CH", "" / undefined -> "".
- */
 export function getInitials(fullName?: string | null): string {
   const parts = fullName?.trim().split(/\s+/).filter(Boolean) ?? []
   if (parts.length === 0) return ''

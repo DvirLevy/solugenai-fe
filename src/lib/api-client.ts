@@ -2,11 +2,6 @@ import type { ApiErrorBody } from '@/types/auth'
 
 const API_URL = import.meta.env.VITE_API_URL
 
-/**
- * Thrown by every apiClient call. `status` is 0 for network failures
- * (no HTTP response at all). `message` is always safe to show a user —
- * backend internals never surface here.
- */
 export class ApiError extends Error {
   status: number
   fieldErrors?: Record<string, string>
