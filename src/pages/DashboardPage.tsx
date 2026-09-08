@@ -1,11 +1,14 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AppNavbar } from '@/components/common/app-navbar'
 import { GradientBorder } from '@/components/common/gradient-border'
-import { useCurrentUser, useLogout } from '@/queries/auth.queries'
+import { authKeys, useLogout } from '@/queries/auth.queries'
+import type { User } from '@/types/auth'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { data: user } = useCurrentUser()
+  const queryClient = useQueryClient()
+  const user = queryClient.getQueryData<User | null>(authKeys.currentUser)
   const logout = useLogout()
 
   const firstName = user?.fullName?.trim().split(/\s+/)[0]

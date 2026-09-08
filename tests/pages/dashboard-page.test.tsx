@@ -2,16 +2,24 @@ import { http, HttpResponse } from 'msw'
 import { Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { mockUser } from '../mocks/handlers'
 import { server } from '../mocks/server'
 import { renderWithProviders, screen, userEvent, waitFor } from '../utils'
 
 const BASE = 'http://localhost:4000/api'
 
+/**
+ * Mirrors AppRoutes: /dashboard sits behind ProtectedRoute in production, and
+ * DashboardPage reads that ancestor's already-mounted useCurrentUser() query
+ * via getQueryData rather than mounting a second observer itself.
+ */
 function Tree() {
   return (
     <Routes>
-      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+      </Route>
       <Route path="/login" element={<div>Login Page</div>} />
     </Routes>
   )

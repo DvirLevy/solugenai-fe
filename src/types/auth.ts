@@ -2,6 +2,7 @@ export interface User {
   id: string
   fullName: string
   email: string
+  mustChangePassword: boolean
 }
 
 export interface LoginRequest {
@@ -27,6 +28,10 @@ export interface ForgotPasswordRequest {
 }
 
 export type AuthResponse = User
+
+export interface MessageResponse {
+  message: string
+}
 
 export interface ApiErrorBody {
   message: string

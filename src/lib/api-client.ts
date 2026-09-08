@@ -1,6 +1,7 @@
 import type { ApiErrorBody } from '@/types/auth'
 
 const API_URL = import.meta.env.VITE_API_URL
+const REFRESH_PATH = '/auth/refresh'
 
 export class ApiError extends Error {
   status: number
@@ -17,9 +18,10 @@ export class ApiError extends Error {
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
+  skipAuthRefresh?: boolean
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function rawRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response: Response
 
   try {
@@ -63,7 +65,47 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return data as T
 }
 
+let pendingRefresh: Promise<boolean> | null = null
+
+function refreshAccessToken(): Promise<boolean> {
+  if (!pendingRefresh) {
+    pendingRefresh = rawRequest(REFRESH_PATH, { method: 'POST' })
+      .then(() => true)
+      .catch(() => false)
+      .finally(() => {
+        pendingRefresh = null
+      })
+  }
+  return pendingRefresh
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  try {
+    return await rawRequest<T>(path, options)
+  } catch (error) {
+    const isRetryableAuthFailure =
+      error instanceof ApiError &&
+      error.status === 401 &&
+      path !== REFRESH_PATH &&
+      !options.skipAuthRefresh
+
+    if (!isRetryableAuthFailure) {
+      throw error
+    }
+
+    const refreshed = await refreshAccessToken()
+    if (!refreshed) {
+      throw error
+    }
+
+    return rawRequest<T>(path, options)
+  }
+}
+
+type CallOptions = { skipAuthRefresh?: boolean }
+
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
+  get: <T>(path: string, options?: CallOptions) => request<T>(path, options),
+  post: <T>(path: string, body?: unknown, options?: CallOptions) =>
+    request<T>(path, { method: 'POST', body, ...options }),
 }

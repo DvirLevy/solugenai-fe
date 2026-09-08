@@ -74,3 +74,82 @@ describe('apiClient error normalization', () => {
     }
   })
 })
+
+describe('apiClient auth-refresh retry', () => {
+  it('retries once after a successful refresh on a 401', async () => {
+    let probeCalls = 0
+    server.use(
+      http.get(`${BASE}/probe`, () => {
+        probeCalls += 1
+        return probeCalls === 1
+          ? HttpResponse.json({ message: 'Unauthorized.' }, { status: 401 })
+          : HttpResponse.json({ ok: true })
+      }),
+      http.post(`${BASE}/auth/refresh`, () => HttpResponse.json({ id: 'user-1' })),
+    )
+
+    await expect(apiClient.get('/probe')).resolves.toEqual({ ok: true })
+    expect(probeCalls).toBe(2)
+  })
+
+  it('surfaces the original 401 when the refresh itself fails', async () => {
+    server.use(
+      http.get(`${BASE}/probe`, () =>
+        HttpResponse.json({ message: 'Unauthorized.' }, { status: 401 }),
+      ),
+      http.post(`${BASE}/auth/refresh`, () =>
+        HttpResponse.json({ message: 'Unauthorized.' }, { status: 401 }),
+      ),
+    )
+
+    await expect(apiClient.get('/probe')).rejects.toMatchObject({ status: 401 })
+  })
+
+  it('does not attempt a refresh when skipAuthRefresh is set', async () => {
+    let refreshCalls = 0
+    server.use(
+      http.get(`${BASE}/probe`, () =>
+        HttpResponse.json({ message: 'Unauthorized.' }, { status: 401 }),
+      ),
+      http.post(`${BASE}/auth/refresh`, () => {
+        refreshCalls += 1
+        return HttpResponse.json({ id: 'user-1' })
+      }),
+    )
+
+    await expect(apiClient.get('/probe', { skipAuthRefresh: true })).rejects.toMatchObject({
+      status: 401,
+    })
+    expect(refreshCalls).toBe(0)
+  })
+
+  it('coalesces concurrent 401s into a single refresh call', async () => {
+    let refreshCalls = 0
+    let aCalls = 0
+    let bCalls = 0
+    server.use(
+      http.get(`${BASE}/probe-a`, () => {
+        aCalls += 1
+        return aCalls === 1
+          ? HttpResponse.json({ message: 'Unauthorized.' }, { status: 401 })
+          : HttpResponse.json({ ok: 'a' })
+      }),
+      http.get(`${BASE}/probe-b`, () => {
+        bCalls += 1
+        return bCalls === 1
+          ? HttpResponse.json({ message: 'Unauthorized.' }, { status: 401 })
+          : HttpResponse.json({ ok: 'b' })
+      }),
+      http.post(`${BASE}/auth/refresh`, () => {
+        refreshCalls += 1
+        return HttpResponse.json({ id: 'user-1' })
+      }),
+    )
+
+    const [a, b] = await Promise.all([apiClient.get('/probe-a'), apiClient.get('/probe-b')])
+
+    expect(a).toEqual({ ok: 'a' })
+    expect(b).toEqual({ ok: 'b' })
+    expect(refreshCalls).toBe(1)
+  })
+})
