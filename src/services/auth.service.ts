@@ -16,7 +16,7 @@ export function login(payload: LoginRequest) {
 }
 
 export function resetPassword(payload: ResetPasswordRequest) {
-  return apiClient.post<void>('/auth/reset-password', payload)
+  return apiClient.post<void>('/auth/change-password', payload)
 }
 
 export function forgotPassword(payload: ForgotPasswordRequest) {

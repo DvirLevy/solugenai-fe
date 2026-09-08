@@ -85,7 +85,7 @@ describe('ResetPasswordPage', () => {
 
   it('maps an invalid-temporary-password backend error onto the tempPassword field', async () => {
     server.use(
-      http.post(`${BASE}/auth/reset-password`, () =>
+      http.post(`${BASE}/auth/change-password`, () =>
         HttpResponse.json(
           {
             message: 'Validation failed',
