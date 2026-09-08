@@ -16,6 +16,16 @@ export interface RegisterRequest {
   password: string
 }
 
+export interface ResetPasswordRequest {
+  email: string
+  tempPassword: string
+  newPassword: string
+}
+
+export interface ForgotPasswordRequest {
+  email: string
+}
+
 /** All three auth endpoints (login/register/me) resolve to the current user. */
 export type AuthResponse = User
 

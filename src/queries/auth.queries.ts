@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@/lib/api-client'
 import * as authService from '@/services/auth.service'
-import type { LoginRequest, RegisterRequest, User } from '@/types/auth'
+import type {
+  ForgotPasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  ResetPasswordRequest,
+  User,
+} from '@/types/auth'
 
 export const authKeys = {
   currentUser: ['auth', 'currentUser'] as const,
@@ -39,6 +45,24 @@ export function useLogin() {
 export function useRegister() {
   return useMutation({
     mutationFn: (payload: RegisterRequest) => authService.register(payload),
+  })
+}
+
+/**
+ * Intentionally does not touch the `currentUser` cache — this action is only
+ * ever reached signed-out (via the emailed reset link), and the backend does
+ * not authenticate the user as a result of it. The calling page sends the
+ * user to /login to sign in with their new password.
+ */
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (payload: ResetPasswordRequest) => authService.resetPassword(payload),
+  })
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (payload: ForgotPasswordRequest) => authService.forgotPassword(payload),
   })
 }
 
