@@ -91,6 +91,8 @@ The backend issues a **JWT inside an HttpOnly cookie**. This frontend never read
 | `POST /auth/login` | `{ email, password, rememberMe }` | `200` → user object, sets the HttpOnly cookie | |
 | `POST /auth/logout` | — | `204` | |
 | `GET /auth/me` | — | `200` → user object, or `401` if unauthenticated | |
+| `POST /auth/forgot-password` | `{ email }` | `204` | Triggers the backend (e.g. a Lambda) to generate a temp password and email it, using `email-templates/temp-password.html`. Assumed to respond identically whether or not the email is registered, so the frontend can show one generic confirmation without leaking which emails have accounts. |
+| `POST /auth/reset-password` | `{ email, tempPassword, newPassword }` | `204` | Reached via the emailed link, not a form field for `email` — it comes off the link's query string (`?email=`). Does not authenticate the user; the Reset Password page sends them to `/login` to sign in with the new password. |
 
 Error responses are assumed to be `{ message: string, errors?: Record<string, string> }`. `lib/api-client.ts` normalizes every failure mode — HTTP error, unparsable body, or the network being down entirely — into one `ApiError` (`status`, a user-safe `message`, optional `fieldErrors`). A `5xx` is always shown as a generic "something went wrong" message; the real backend error text is never surfaced to the user.
 
@@ -102,10 +104,12 @@ All server state lives in TanStack Query under a single query key, `["auth", "cu
 - `useLogin()` — on success, invalidates `currentUser`, causing any mounted `useCurrentUser()` observer (i.e. the route guards) to refetch and reactively redirect.
 - `useLogout()` — on success, writes `null` into the cache directly (no round trip needed).
 - `useRegister()` — deliberately does **not** touch the cache; see the API contract note above.
+- `useResetPassword()` — same reasoning as `useRegister()`: does not touch the cache. The page navigates to `/login` on success rather than assuming the reset also signs the user in.
+- `useForgotPassword()` — same reasoning again: does not touch the cache. The page swaps to a confirmation panel on success rather than navigating away.
 
 ## Protected route behavior
 
-`routes/AppRoutes.tsx` wires up `/login`, `/register` (behind `GuestRoute`) and `/dashboard` (behind `ProtectedRoute`), with a catch-all redirecting to `/dashboard`. Both guards call `useCurrentUser()` and render a full-page loader while it's pending — the guarded page is **never** rendered before the auth check resolves, so protected content can't flash for an unauthenticated visitor, and an already-authenticated visitor never sees the login/register form.
+`routes/AppRoutes.tsx` wires up `/login`, `/register`, `/forgot-password`, `/reset-password` (all behind `GuestRoute`) and `/dashboard` (behind `ProtectedRoute`), with a catch-all redirecting to `/dashboard`. Both guards call `useCurrentUser()` and render a full-page loader while it's pending — the guarded page is **never** rendered before the auth check resolves, so protected content can't flash for an unauthenticated visitor, and an already-authenticated visitor never sees the login/register/forgot-password/reset-password form.
 
 ## Design system
 
@@ -113,7 +117,7 @@ Every color, radius, shadow, and control size is a CSS variable defined once in 
 
 Two assumptions worth flagging:
 - The SoluGenAI wordmark is recreated as a small typographic component (`components/common/logo.tsx`) since no logo asset was supplied — trivially swappable for a real SVG.
-- "Forgot your password?" is rendered for visual fidelity but is non-functional (no route/flow was in scope) — it's a non-interactive element rather than a dead link/button.
+- "Forgot your password?" on the login form links to `/forgot-password` (`pages/ForgotPasswordPage.tsx`): the user enters their email, the backend (e.g. a Lambda) generates and emails a temp password using `email-templates/temp-password.html`, and that email's link lands on `/reset-password` (`pages/ResetPasswordPage.tsx`) with `?email=` already in the URL so the account is identified without asking again.
 
 ## Responsive design
 

@@ -13,6 +13,7 @@ function Tree() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={<div>Dashboard Page</div>} />
+      <Route path="/forgot-password" element={<div>Forgot Password Page</div>} />
     </Routes>
   )
 }
@@ -74,5 +75,16 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Sign In' }))
 
     await waitFor(() => expect(screen.getByText('Dashboard Page')).toBeInTheDocument())
+  })
+
+  it('navigates to the forgot-password page via the "Forgot your password?" link', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<Tree />, { route: '/login' })
+
+    await user.click(await screen.findByRole('link', { name: 'Forgot your password?' }))
+
+    await waitFor(() =>
+      expect(screen.getByText('Forgot Password Page')).toBeInTheDocument(),
+    )
   })
 })

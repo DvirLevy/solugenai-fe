@@ -1,10 +1,12 @@
 import { z } from 'zod'
 
+const emailSchema = z
+  .string()
+  .min(1, 'Email is required.')
+  .email('Please enter a valid email address.')
+
 export const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required.')
-    .email('Please enter a valid email address.'),
+  email: emailSchema,
   password: z.string().min(1, 'Password is required.'),
   rememberMe: z.boolean(),
 })
@@ -23,10 +25,7 @@ export const registerSchema = z
       .string()
       .trim()
       .min(2, 'Please enter your full name.'),
-    email: z
-      .string()
-      .min(1, 'Email is required.')
-      .email('Please enter a valid email address.'),
+    email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password.'),
   })
@@ -36,3 +35,26 @@ export const registerSchema = z
   })
 
 export type RegisterFormValues = z.infer<typeof registerSchema>
+
+export const resetPasswordSchema = z
+  .object({
+    tempPassword: z.string().min(1, 'Enter the temporary password from your email.'),
+    newPassword: passwordSchema,
+    confirmNewPassword: z.string().min(1, 'Please confirm your new password.'),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmNewPassword'],
+  })
+  .refine((data) => data.newPassword !== data.tempPassword, {
+    message: 'New password must be different from the temporary password.',
+    path: ['newPassword'],
+  })
+
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
+
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+})
+
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>

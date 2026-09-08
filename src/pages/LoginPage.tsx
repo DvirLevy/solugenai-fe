@@ -74,13 +74,9 @@ export function LoginPage() {
                 Remember me
               </Label>
             </div>
-            {/* Not implemented in this assignment — kept for visual fidelity with the mockup. */}
-            <span
-              aria-disabled="true"
-              className="text-brand text-sm font-semibold opacity-70"
-            >
+            <Link to="/forgot-password" className="text-brand text-sm font-semibold hover:underline">
               Forgot your password?
-            </span>
+            </Link>
           </div>
           <FormError message={login.isError ? getErrorMessage(login.error) : null} />
           <LoadingButton type="submit" isLoading={login.isPending}>

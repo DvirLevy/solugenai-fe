@@ -25,4 +25,10 @@ export const handlers = [
   http.post(`${BASE}/auth/logout`, () => {
     return new HttpResponse(null, { status: 204 })
   }),
+  http.post(`${BASE}/auth/reset-password`, () => {
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.post(`${BASE}/auth/forgot-password`, () => {
+    return new HttpResponse(null, { status: 204 })
+  }),
 ]

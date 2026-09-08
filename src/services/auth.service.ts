@@ -1,5 +1,11 @@
 import { apiClient } from '@/lib/api-client'
-import type { AuthResponse, LoginRequest, RegisterRequest } from '@/types/auth'
+import type {
+  AuthResponse,
+  ForgotPasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  ResetPasswordRequest,
+} from '@/types/auth'
 
 export function register(payload: RegisterRequest) {
   return apiClient.post<AuthResponse>('/auth/register', payload)
@@ -7,6 +13,14 @@ export function register(payload: RegisterRequest) {
 
 export function login(payload: LoginRequest) {
   return apiClient.post<AuthResponse>('/auth/login', payload)
+}
+
+export function resetPassword(payload: ResetPasswordRequest) {
+  return apiClient.post<void>('/auth/reset-password', payload)
+}
+
+export function forgotPassword(payload: ForgotPasswordRequest) {
+  return apiClient.post<void>('/auth/forgot-password', payload)
 }
 
 export function logout() {
